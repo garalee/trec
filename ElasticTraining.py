@@ -12,6 +12,40 @@ class ElasticTraining:
         self.field = ['title','body','abstract']
         self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
 
+    def training_scheme(self,filename):
+        tokens = filename.split('_')
+        ds = tokens[3]
+        topicnum = int(tokens[4].split('.')[0])
+        scheme = ['bm25','tfidf','ib','lmd','lmj','dfr']
+
+        
+        data = pd.read_csv(open(filename),sep=' ')
+        for s1 in range(len(scheme)):
+            for s2 in range(s1+1,len(scheme)):
+                min_em = float("inf")
+                remember_alpha = 0
+                for alpha in np.arange(0.1,1,0.01):
+                    # column nomalization 
+                    normA = data[scheme[s1]]/data[scheme[s1]].mean()
+                    normB = data[scheme[s2]]/data[scheme[s2]].mean()
+
+                    # row normalization
+                    total = normA + normB
+                    score=normA*alpha/total + (1-alpha)*normB/total
+
+                    relevancy = data['relevancy']
+                    relevancy[relevancy == 1] = 0.5
+                    relevancy[relevancy == 2] = 1
+
+                    em = (relevancy - score) ** 2
+
+                    if em.sum() < min_em:
+                        min_em = em.sum()
+                        remember_alpha = alpha
+
+                print "Scheme <"+scheme[s1] + "><"+scheme[s2] + "> : loss :"+str(min_em) + ", alpha:",str(alpha)
+                    
+
     def test(self):
          # Find the topic we are dealing with
         for entry in self.que:

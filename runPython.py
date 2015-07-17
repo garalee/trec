@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     
     scheme = ['bm25','tfidf','ib','lmd','lmj']
-
+    training.training_scheme('vector/scheme_score_vector_summary_9.csv')
     #indexing.doIndex()
 
 
@@ -20,12 +20,12 @@ if __name__ == "__main__":
     #     for i in range(1,31):
     #         training.buildVectorWithScheme(i,ds)
 
-    for s in scheme:
-        for ds in ['description','summary']:
-            for i in range(1,31):
-                training.buildVectorWithField(s,ds,i)
+    # for s in scheme:
+    #     for ds in ['description','summary']:
+    #         for i in range(1,31):
+    #             training.buildVectorWithField(s,ds,i)
 
-
+    
     
     # Field Training
     # print "Field Training..."
