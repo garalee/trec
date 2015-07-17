@@ -1,0 +1,60 @@
+{
+  "settings" : {
+  	"index" : {
+      "similarity" : {
+        "my_lmj_similarity" : {
+         "type" : "LMJelinekMercer",
+         "lambda" : 0.7
+        }
+       }
+
+    },
+    "analysis" : {
+      "analyzer" : {
+        "my_lmj_analyzer" : {
+          "tokenizer" : "standard",
+          "filter" : ["lowercase",  "my_baseform"]
+
+        }
+      },
+      "filter": {
+        "my_baseform": {
+          "type": "baseform",
+          "name": "en"
+        }
+      }
+
+    }
+  },
+  "mappings":{
+     "article":{
+        "properties":{
+          "pmcid":{
+              "type":"string"
+          },
+           "title":{
+              "analyzer":"my_lmj_analyzer",
+              "type":"string",
+              "similarity": "my_lmj_similarity",
+              "store" : "yes",
+              "index" : "analyzed"
+
+           },
+          "abstract":{
+              "analyzer":"my_lmj_analyzer",
+              "type":"string",
+              "similarity": "my_lmj_similarity",
+              "store" : "yes",
+              "index" : "analyzed"
+          },
+          "body":{
+              "analyzer":"my_lmj_analyzer",
+              "type":"string",
+              "similarity": "my_lmj_similarity",
+              "store" : "yes",
+              "index" : "analyzed"
+          }
+        }
+     }
+  }
+}

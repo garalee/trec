@@ -1,0 +1,63 @@
+{
+    "settings" : {
+	"index" : {
+	    "similarity" : {
+		"my_dfr_similarity" : {
+		    "type" : "DFR",
+		    "basic_model" : "g",
+		    "after_effect" : "l",
+		    "normalization" : "h2",
+		    "normalization.h2.c" : "2.0"
+		}
+	    }
+
+	},
+	"analysis" : {
+	    "analyzer" : {
+		"my_DFR_analyzer" : {
+		    "tokenizer" : "standard",
+		    "filter" : ["lowercase",  "baseform"]
+
+		}
+	    },
+	    "filter": {
+		"my_porter_stem": {
+		    "type": "baseform",
+		    "name": "en"
+		}
+	    }
+
+	}
+    },
+    "mappings":{
+	"DFR":{
+            "properties":{
+		"pmcid":{
+		    "type":"string"
+		},
+		"title":{
+		    "analyzer":"my_DFR_analyzer",
+		    "type":"string",
+		    "similarity": "my_dfr_similarity",
+		    "store" : "yes",
+		    "index" : "analyzed"
+
+		},
+		"abstract":{
+		    "analyzer":"my_DFR_analyzer",
+		    "type":"string",
+		    "similarity": "my_dfr_similarity",
+		    "store" : "yes",
+		    "index" : "analyzed"
+		},
+		"body":{
+		    "analyzer":"my_DFR_analyzer",
+		    "type":"string",
+		    "similarity": "my_dfr_similarity",
+		    "store" : "yes",
+		    "index" : "analyzed"
+		}
+            }
+	}
+    }
+}

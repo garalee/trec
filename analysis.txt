@@ -1,0 +1,10 @@
+{"trec":
+{
+			"aliases":{},
+			"mappings":
+				{
+					"BM25":
+						{
+							"properties":
+								{
+									"abstract":{"type":"string"},"body":{"type":"string"},"mappings":{"properties":{"BM25":{"properties":{"properties":{"properties":{"abstract":{"properties":{"analyzer":{"type":"string"},"similarity":{"type":"string"},"type":{"type":"string"}}},"body":{"properties":{"analyzer":{"type":"string"},"similarity":{"type":"string"},"type":{"type":"string"}}},"pmcid":{"properties":{"type":{"type":"string"}}},"title":{"properties":{"analyzer":{"type":"string"},"similarity":{"type":"string"},"type":{"type":"string"}}}}}}}}},"pmcid":{"type":"string"},"settings":{"properties":{"analysis":{"properties":{"analyzer":{"properties":{"my_BM25_analyzer":{"properties":{"filter":{"type":"string"},"tokenizer":{"type":"string"}}}}},"filter":{"properties":{"baseform":{"properties":{"name":{"type":"string"},"type":{"type":"string"}}}}}}}}},"title":{"type":"string"}}}},"settings":{"index":{"creation_date":"1436943258478","uuid":"kNp3m3UhQIWEoj0Hlg4rqA","number_of_replicas":"1","number_of_shards":"5","version":{"created":"1060099"}}},"warmers":{}}}

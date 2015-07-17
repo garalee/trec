@@ -1,0 +1,41 @@
+{
+  "settings" : {
+    "analysis" : {
+      "analyzer" : {
+        "my_tfidf_analyzer" : {
+          "tokenizer" : "standard",
+          "filter" : ["lowercase", "baseform", "unique"]
+
+        }
+      },
+      "filter": {
+        "baseform": {
+          "type": "baseform",
+          "name": "en"
+        }
+      }
+    }
+  },
+  "mappings":{
+     "article":{
+        "properties":{
+          "pmcid":{
+              "type":"string"
+          },
+           "title":{
+              "analyzer":"my_tfidf_analyzer",
+              "type":"string"
+
+           },
+          "abstract":{
+              "analyzer":"my_tfidf_analyzer",
+              "type":"string"
+          },
+          "body":{
+              "analyzer":"my_tfidf_analyzer",
+              "type":"string"
+          }
+        }
+     }
+  }
+}

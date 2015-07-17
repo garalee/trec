@@ -1,0 +1,49 @@
+{
+        "settings" : {
+            "analysis" : {
+                "filter": {
+                  "custom_english_stemmer": {
+                    "type": "stemmer",
+                    "name": "english"
+                  }
+                },
+                "analyzer" : {
+                    "my_ngram_analyzer" : {
+
+                      "tokenizer" : "my_ngram_tokenizer",
+                      "filter" : "lowercase"
+
+                    }
+                },
+                "tokenizer" : {
+                    "my_ngram_tokenizer" : {
+                        "type" : "nGram",
+                        "min_gram" : "5",
+                        "max_gram" : "5",
+                        "token_chars": [ "letter", "digit" ]
+                    }
+                }
+            }
+        },
+  "mappings":{
+     "article":{
+        "properties":{
+          "pmcid":{
+            "type":"string"
+          },
+           "title":{
+              "analyzer":"my_ngram_analyzer",
+              "type":"string"
+           },
+          "abstract":{
+              "analyzer":"my_ngram_analyzer",
+              "type":"string"
+           },
+          "body":{
+            "analyzer":"my_ngram_analyzer",
+              "type":"string"
+          }
+        }
+     }
+  }
+    }

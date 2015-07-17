@@ -1,0 +1,60 @@
+{
+  "settings" : {
+  	"index" : {
+      "similarity" : {
+        "my_LMD_similarity" : {
+         "type" : "LMDirichlet",
+         "mu" : "2000"
+        }
+       }
+
+    },
+    "analysis" : {
+      "analyzer" : {
+        "my_LMD_analyzer" : {
+          "tokenizer" : "standard",
+          "filter" : ["lowercase",  "my_baseform"]
+
+        }
+      },
+      "filter": {
+        "my_baseform": {
+          "type": "baseform",
+          "name": "en"
+        }
+      }
+
+    }
+  },
+  "mappings":{
+     "article":{
+        "properties":{
+          "pmcid":{
+              "type":"string"
+          },
+           "title":{
+              "analyzer":"my_LMD_analyzer",
+              "type":"string",
+              "similarity": "my_LMD_similarity",
+              "store" : "yes",
+              "index" : "analyzed"
+
+           },
+          "abstract":{
+              "analyzer":"my_LMD_analyzer",
+              "type":"string",
+              "similarity": "my_LMD_similarity",
+              "store" : "yes",
+              "index" : "analyzed"
+          },
+          "body":{
+              "analyzer":"my_LMD_analyzer",
+              "type":"string",
+              "similarity": "my_LMD_similarity",
+              "store" : "yes",
+              "index" : "analyzed"
+          }
+        }
+     }
+  }
+}
