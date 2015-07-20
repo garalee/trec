@@ -11,7 +11,7 @@ class ElasticTraining:
         self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
 
     def search(self,scheme,num,ds):
-        filename = "search_result/"+"scheme_"+ds+"_"+str(num)+".csv"
+        filename = "search_result/"+ scheme + "_"+ds+"_"+str(num)+".csv"
 
         for index,entry in self.que.iterrows():
             if entry['topic'] == num:

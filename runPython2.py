@@ -30,7 +30,7 @@ if __name__ == "__main__":
     for s in scheme:
         for i in range(1,31):
             print i
-            training.search(s,1,'summary')
+            training.search(s,i,'summary')
 
 
 
