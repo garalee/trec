@@ -6,12 +6,15 @@ import MongoEx
 class ElasticTraining:
     def __init__(self):
         self.es = Elasticsearch([{'host':'localhost','port':9200}])
-        self.que = pd.read_csv('query2014.csv',sep='\t')
+        self.que = pd.read_csv(open('query2014.csv'),sep='\t')
+        self.ans = pd.read_csv(open('answer2014.csv'),sep='\t')
         self.field = ['title','body','abstract']
         self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
 
-    def search(self,scheme,num,ds):
+    def search_scheme(self,scheme,num,ds):
         filename = "search_result/"+ scheme + "_"+ds+"_"+str(num)+".csv"
+
+        self.ans.sort(['topic','relevancy'],ascending=[1,0])
 
         for index,entry in self.que.iterrows():
             if entry['topic'] == num:
@@ -20,7 +23,7 @@ class ElasticTraining:
 
         content = query[ds].replace(r"/",',')
         analyzer = "my_"+scheme+"_analyzer"
-        res = self.es.search(index=scheme +"_garam",q=content,doc_type='article',analyzer=analyzer,size=15000,request_timeout=120)
+        res = self.es.search(index=scheme +"_garam",q=content,doc_type='article',analyzer=analyzer,size=5000,request_timeout=120)
         l = pd.DataFrame()
         for entry in res['hits']['hits']:
             pmcid = entry['_source']['pmcid']
@@ -29,7 +32,26 @@ class ElasticTraining:
 
         l.to_csv(filename,sep='\t',index=False)
 
+    def search_field(self,t,num,ds,scheme):
+        filename = "search_result/"+scheme + "_" +ds + "_" + t + "_" + str(num) + ".csv"
+        for index,entry in self.que.iterrows():
+            if entry['topic'] == num:
+                query = entry
+                break
+            
+        content = query[ds].replace(r"/",',')
+        analyzer = "my_"+scheme+"_analyzer"
+        res = self.es.search(index=scheme +"_garam",q=t+":"+content,doc_type='article',analyzer=analyzer,size=5000,request_timeout=120)
+        l = pd.DataFrame()
+        
+        for entry in res['hits']['hits']:
+            pmcid = entry['_source']['pmcid']
+            score = entry['_score']
+            l = l.append(pd.DataFrame({"pmcid" : [pmcid],"score" : [score]}))
 
+        l.to_csv(filename,sep='\t',index=False)
+
+        
     def buildVectorWithoutTN(self,prefix,ds):
         integrated_data = pd.DataFrame()
         for topicnum in range(1,31):
@@ -186,37 +208,30 @@ class ElasticTraining:
                 
                 
         
-    def buildVectorWithScheme(self,num,ds):
-        print "Building Scheme Score Vector...",ds,":",str(num)
-        filename = "scheme_score_vector_" + ds  +"_" +str(num)+".csv"
-
+    def buildVectorWithScheme(self,ds='summary'):
         v = pd.DataFrame()
         # Find the topic we are dealing with
-        for entry in self.que:
-            if entry['number'] == str(num):
-                query = entry
-                break
+       
                     
         pmcList = []
         relevancyList = []
     
         # pmcid and relevancy collecting
-        for entry in self.ans:
+        for index,entry in self.ans.iterrows():
             pmcList.append(entry['pmcid'])
-            relevancyList.append(entry['FIELD4'])
-
-        content = query[ds].replace(r"/",",")
+            relevancyList.append(entry['relevancy'])
 
         for s in self.scheme:
-            print s
-            analyzer = "my_"+s+"_analyzer"
-            res = self.es.search(index=s+"_garam",q=content,doc_type="article",analyzer=analyzer,size=10000,request_timeout=60)
-            l = pd.DataFrame(columns=[s])
+            for i in range(1,31):
+                filename = s+ '_' + ds + '_' + str(i) + '.csv'
+                print "Working on",filename
+                data = pd.read_csv(open('search_result/'+filename),sep='\t')
+                l = pd.DataFrame(columns=[s])
 
-            for entry in res['hits']['hits']:
-                pmcid = entry['_source']['pmcid']
-                score = entry['_score']
-                l = l.append(pd.DataFrame({s:[score]},index=[pmcid]))
+                for index,entry in data.iterrows():
+                    pmcid = entry['pmcid']
+                    score = entry['score']
+                    l = l.append(pd.DataFrame({s:[score]},index=[pmcid]))
             
             v = pd.concat([v,l],join='inner',axis=1)
             # merge schemes
@@ -226,54 +241,34 @@ class ElasticTraining:
         v.to_csv("vector/"+filename,sep='\t')
         return (v,r)
             
-    def buildVectorWithField(self,scheme,ds,num):
-        print "Building Field Vector....",scheme,":",num
-        filename = "field_score_vector_" +scheme + "_" + ds + "_" + str(num) +".csv"
-        for entry in self.que:
-            if entry['number'] == str(num):
-                query = entry
-                break
-
+    def buildVectorWithField(self,scheme,ds='summary'):
         pmcList = []
         relevancyList = []
 
-        for entry in self.ans:
+        for index,entry in self.ans.iterrows():
             pmcList.append(entry['pmcid'])
-            relevancyList.append(entry['FIELD4'])
+            relevancyList.append(entry['relevancy'])
                 
-        content = query[ds].replace(r"/",",")
         v = pd.DataFrame()
 
-        analyzer = "my_" + scheme + "_analyzer"
-        resTitle = self.es.search(index=scheme+"_garam",q="title:"+content,doc_type="article",analyzer=analyzer,size=10000)
-        resAbstract = self.es.search(index=scheme+"_garam",q="abstract:"+content,doc_type="article",analyzer=analyzer,size=10000)
-        resBody = self.es.search(index=scheme+"_garam",q="body:"+content,doc_type="article",analyzer=analyzer,size=10000)
+        for t in ['title','abstract','body']:
+            for i in range(1,31):
+                filename = "search_result/"+scheme+"_" + ds + "_" + t + "_" + str(i) + ".csv"
+                print "Working on",filename
+                data = pd.read_csv(open(filename),sep='\t')
+                l = pd.DataFrame(columns=[t])
 
-        titleL = pd.DataFrame(columns=['title'])
-        abstractL = pd.DataFrame(columns=['abstract'])
-        bodyL = pd.DataFrame(columns=['body'])
-
-        for entry in resTitle['hits']['hits']:
-            pmcid = entry['_source']['pmcid']
-            score = entry['_score']
-            titleL = titleL.append(pd.DataFrame({'title':[score]},index=[pmcid]))
-
-        for entry in resAbstract['hits']['hits']:
-            pmcid = entry['_source']['pmcid']
-            score = entry['_score']
-            abstractL = abstractL.append(pd.DataFrame({'abstract':[score]},index=[pmcid]))
-
-        for entry in resBody['hits']['hits']:
-            pmcid = entry['_source']['pmcid']
-            score = entry['_score']
-            bodyL = bodyL.append(pd.DataFrame({'body':[score]},index=[pmcid]))
-
-        v = pd.concat([titleL,abstractL,bodyL],join='inner',axis=1)
+                for index,entry in data.iterrows():
+                    pmcid = entry['pmcid']
+                    score = entry['score']
+                    l = l.append(pd.DataFrame({t:[score],index=[pmcid]}))
+                    
+            v = pd.concat([v,l],join='inner',axis=1)
+            
         r = pd.DataFrame({'relevancy' : relevancyList},index=[pmcList])
         r = r.join(v,how='inner')
-        r.to_csv("vector/"+filename,sep='\t')
+        r.to_csv('vector/'+filename,sep='\t')
         return r
-        
             
     def training_field(self,filename):
         tokens = filename.split('_')

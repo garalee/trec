@@ -9,7 +9,7 @@ if __name__ == "__main__":
     #searching = ElasticSearching.ElasticSearching()
 
     
-    scheme = ['bm25','tfidf','ib','lmd','lmj','dfr']
+    scheme = ['tfidf','ib','lmd','lmj','dfr']
     #indexing.doIndex()
 
     # print "Build DS Vector.."
@@ -27,21 +27,20 @@ if __name__ == "__main__":
     #         l = l.append(training.training_ds(filename))
     # l.to_csv("analysis/ds_result.csv",sep='\t',index=False,columns=['scheme','topic','loss','alpha'])
     # print "Done"
-    for s in scheme:
-        for i in range(26,31):
-            print s,i
-            training.search(s,i,'summary')
+    # for i in range(1,31):
+    #     print 'bm25',i
+    #     training.search('bm25',i,'summary')
 
 
 
 
 
     
-    # print "Building Scheme Vector..."     
-    # for ds in ['description','summary']:
-    #     for i in range(1,31):
-    #         training.buildVectorWithScheme(i,ds)
+    print "Building Scheme Vector..."     
+    training.buildVectorWithScheme()
+    print "Done"
     # print "Scheme Vector Integration"
+    
     # prefix = "scheme_score_vector"
     # training.buildVectorWithoutTN(prefix,'description')
     # training.buildVectorWithoutTN(prefix,'summary')
