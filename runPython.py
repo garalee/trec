@@ -2,16 +2,10 @@ import MongoEx
 import ElasticIndexing
 import ElasticSearching
 import ElasticTraining
-
+import pandas as pd
 if __name__ == "__main__":
-    training = ElasticTraining.ElasticTraining()
-    indexing = ElasticIndexing.ElasticIndexing()
-    searching = ElasticSearching.ElasticSearching()
-
-    
+    training = ElasticTraining.ElasticTraining()    
     scheme = ['bm25','tfidf','ib','lmd','lmj']
-    training.training_scheme('vector/scheme_score_vector_summary_9.csv')
-    #indexing.doIndex()
 
 
     
@@ -24,22 +18,15 @@ if __name__ == "__main__":
     #     for ds in ['description','summary']:
     #         for i in range(1,31):
     #             training.buildVectorWithField(s,ds,i)
-
+                
+    # print "\a"
     
     
-    # Field Training
-    # print "Field Training..."
-    # for ds in ['description','summary']:
-    #     for s in scheme:
-    #         for i in range(1,31):
-    #             r.fieldweight_training(s,i,ds)
-    # print "Field Training Done"
-
-
-    
-    # print "Scheme Training..."
-    # # Scheme Training 
-    # for i in range(1,31):
-    #     for ds in ['description','summary']:
-    #         r.schemeweight_training(i,ds)
-    # print "Scheme Training Done"
+    print "Scheme Training..."
+    l = pd.DataFrame(columns=['scheme1','scheme2','ds','topic','loss','alpha'])
+    for ds in ['description','summary']:
+        for num in range(1,31):
+            filename = "vector/scheme_score_vector_" + ds + "_" + str(num) + ".csv"
+            l = l.append(training.training_scheme(filename))
+    l.to_csv("analysis/scheme_result.csv",sep='\t',index=False,columns=['scheme1','scheme2','ds','topic','loss','alpha'])
+    print "Done"

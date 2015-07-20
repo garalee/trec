@@ -12,81 +12,63 @@ class ElasticTraining:
         self.field = ['title','body','abstract']
         self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
 
-    def search(self,scheme,num,ds):
-        filename = "search_result/"+"scheme_"+ds+"_"+str(num)+".csv"
-
-        for entry in self.que:
-            if entry['number'] == str(num):
-                query = entry
-                break
-
-        content = query[ds].replace(r"/",',')
-        analyzer = "my_"+scheme+"_analyzer"
-        res = self.es.search(index=scheme +"_garam",q=content,doc_type='article',analyzer=analyzer,size=15000,request_timeout=120)
-        l = pd.DataFrame()
-        for entry in res['hits']['hits']:
-            pmcid = entry['_source']['pmcid']
-            score = entry['_score']
-            l = l.append(pd.DataFrame({"pmcid" : [pmcid],"score" : [score]}))
-
-        l.to_csv(filename,sep='\t',index=False)
-
-
-    def buildVectorWithoutTN(self,prefix,ds):
-        integrated_data = pd.DataFrame()
-        for topicnum in range(1,31):
-            filename = "vector/" + prefix + "_" + ds + "_" + str(topicnum) +".csv"
-            data = pd.read_csv(open(filename),sep='\t')
-            
-            data['index'] = data.index
-            data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
-            data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
-            integrated_data = pd.concat([integrated_data,data])
-
-        return integrated_data
-        
-
     def training_scheme(self,filename):
         tokens = filename.split('_')
+        ds = tokens[3]
+        topicnum = int(tokens[4].split('.')[0])
+
+        l = pd.DataFrame(columns=['scheme1','scheme2','scheme3','ds','topic','loss','alpha','beta'])
+
+
+        data = pd.read_csv(open(filename),sep='\t')
         
-        l = pd.DataFrame(columns=['scheme1','scheme2','ds','loss','alpha','beta'])
         data['index'] = data.index
         data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
         data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
-        
+
         for s1 in range(len(self.scheme)):
             for s2 in range(s1+1,len(self.scheme)):
-                min_em = float("inf")
-                remember_alpha = 0
-                for alpha in np.arange(0,1,0.01):
-                    normA = data[self.scheme[s1]]/data[self.scheme[s1]].sum()
-                    normB = data[self.scheme[s2]]/data[self.scheme[s2]].sum()
-                        
-                    score= alpha*normA + (1-alpha)*normB
-                    relevancy = data['relevancy']
+                for s3 in range(s2+1,len(self.scheme)):
+                    min_em = float("inf")
+                    remember_alpha = 0
+                    remember_beta = 0
+                    for alpha in np.arange(0,1,0.01):
+                        for beta in np.arange(0,1,0.01):
 
-                    relevancy[relevancy == 1] = 0.75
-                    relevancy[relevancy == 2] = 1
+                            normA = data[self.scheme[s1]]/data[self.scheme[s1]].sum()
+                            normB = data[self.scheme[s2]]/data[self.scheme[s2]].sum()
+                            normC = data[self.scheme[s3]]/data[self.scheme[s3]].sum()
+                            #normA = data[self.scheme[s1]]
+                            #normB = data[self.scheme[s2]]
+                            # row normalization
+                            score= (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
+                            relevancy = data['relevancy']
 
-                    em = (relevancy - score) ** 2
+                            relevancy[relevancy == 1] = 0.75
+                            relevancy[relevancy == 2] = 1
 
-                    if em.sum() < min_em:
-                        min_em = em.sum()
-                        remember_alpha = alpha
+                            em = (relevancy - score) ** 2
+
+                            if em.sum() < min_em:
+                                min_em = em.sum()
+                                remember_alpha = alpha
+                                remember_beta = beta
                                 
                     l = l.append(pd.DataFrame( 
-                        {
-                            'scheme1' : [self.scheme[s1]], 
-                            'scheme2' : [self.scheme[s2]], 
-                            'ds' : [ds], 
-                            'topic' : [topicnum], 
-                            'loss'  : [min_em], 
-                            'alpha' : [remember_alpha],
-                            'beta' : [remember_beta]
-                        }
-                    ))
-        return l            
-        
+                            {
+                                'scheme1' : [self.scheme[s1]], 
+                                'scheme2' : [self.scheme[s2]], 
+                                'scheme3' : [self.scheme[s3]],
+                                'ds' : [ds], 
+                                'topic' : [topicnum], 
+                                'loss'  : [min_em], 
+                                'alpha' : [remember_alpha],
+                                'beta' : [remember_beta]
+                                }
+                            ))
+        return l
+            
+
     def test(self):
          # Find the topic we are dealing with
         for entry in self.que:
@@ -212,7 +194,7 @@ class ElasticTraining:
         for s in self.scheme:
             print s
             analyzer = "my_"+s+"_analyzer"
-            res = self.es.search(index=s+"_garam",q=content,doc_type="article",analyzer=analyzer,size=10000,request_timeout=60)
+            res = self.es.search(index=s+"_garam",q=content,doc_type="article",analyzer=analyzer,size=15000,request_timeout=30)
             l = pd.DataFrame(columns=[s])
 
             for entry in res['hits']['hits']:
@@ -247,9 +229,9 @@ class ElasticTraining:
         v = pd.DataFrame()
 
         analyzer = "my_" + scheme + "_analyzer"
-        resTitle = self.es.search(index=scheme+"_garam",q="title:"+content,doc_type="article",analyzer=analyzer,size=10000)
-        resAbstract = self.es.search(index=scheme+"_garam",q="abstract:"+content,doc_type="article",analyzer=analyzer,size=10000)
-        resBody = self.es.search(index=scheme+"_garam",q="body:"+content,doc_type="article",analyzer=analyzer,size=10000)
+        resTitle = self.es.search(index=scheme+"_garam",q="title:"+content,doc_type="article",analyzer=analyzer,size=15000)
+        resAbstract = self.es.search(index=scheme+"_garam",q="abstract:"+content,doc_type="article",analyzer=analyzer,size=15000)
+        resBody = self.es.search(index=scheme+"_garam",q="body:"+content,doc_type="article",analyzer=analyzer,size=15000)
 
         titleL = pd.DataFrame(columns=['title'])
         abstractL = pd.DataFrame(columns=['abstract'])
@@ -283,7 +265,7 @@ class ElasticTraining:
         ds = tokens[4]
         num = tokens[5].split('.')[0]
 
-        data = pd.read_csv(open(filename),sep=' ')
+        data = pd.read_csv(open(filename),sep='\t')
         em_min = float("inf")
         remember_alpha = 0
         remember_beta = 0
