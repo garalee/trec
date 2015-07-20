@@ -6,17 +6,15 @@ import MongoEx
 class ElasticTraining:
     def __init__(self):
         self.es = Elasticsearch([{'host':'localhost','port':9200}])
-        self.db = MongoEx.MongoEx().db
-        self.ans = self.db['ans2014'].find_one()['topicanswer']
-        self.que = self.db['que2014'].find_one()['topic']
+        self.que = pd.read_csv('query2014.csv',sep='\t')
         self.field = ['title','body','abstract']
         self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
 
     def search(self,scheme,num,ds):
         filename = "search_result/"+"scheme_"+ds+"_"+str(num)+".csv"
 
-        for entry in self.que:
-            if entry['number'] == str(num):
+        for index,entry in self.que.iterrows():
+            if entry['topic'] == num:
                 query = entry
                 break
 

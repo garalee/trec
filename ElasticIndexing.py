@@ -1,5 +1,6 @@
 from elasticsearch import Elasticsearch
 import MongoEx
+import pandas as pd
 
 class ElasticIndexing:
     def __init__(self):
@@ -7,6 +8,31 @@ class ElasticIndexing:
         self.db = MongoEx.MongoEx().db
         self.ans = self.db['ans2014'].find_one()['topicanswer']
         self.coll = self.db['article']
+        self.ans = self.db['ans2014'].find_one()['topicanswer']
+        self.que = self.db['que2014'].find_one()['topic']
+
+    def buildquery(self):
+        filename = 'query2014.csv'
+        data = pd.DataFrame()
+
+        for entry in self.que:
+            topic = entry['number']
+            description = entry['description']
+            summary = entry['summary']
+            data = data.append(pd.DataFrame({"topic":[topic], "description" : [description],'summary':[summary]}))
+
+        data.to_csv(filename,columns=['topic','description','summary'],index=False,sep='\t')
+
+    def buildanswer(self):
+        filename = 'answer2014.csv'
+        data = pd.DataFrame()
+
+        for entry in self.ans:
+            pmcid = entry['pmcid']
+            topic = entry['topicnum']
+            relevancy = entry['FIELD4']
+            data =data.append(pd.DataFrame({'pmcid':[pmcid],'topic':[topic],'relevancy':[relevancy]}))
+        data.to_csv(filename,columns=['pmcid','topic','relevancy'],index=False,sep='\t')
 
     def getDocument(self,pmcid):
         res = self.coll.find({"articleMeta.pmcid" : str(pmcid)}).next()

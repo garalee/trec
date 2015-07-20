@@ -9,7 +9,7 @@ if __name__ == "__main__":
     #searching = ElasticSearching.ElasticSearching()
 
     
-    scheme = ['bm25','tfidf','ib','lmd','lmj','dfr']
+    scheme = ['bm25','ib','lmd','lmj','dfr']
     #indexing.doIndex()
 
     # print "Build DS Vector.."
@@ -27,10 +27,10 @@ if __name__ == "__main__":
     #         l = l.append(training.training_ds(filename))
     # l.to_csv("analysis/ds_result.csv",sep='\t',index=False,columns=['scheme','topic','loss','alpha'])
     # print "Done"
-    
-    # for i in range(20,31):
-    #     print i
-    #     training.search('tfidf',1,'summary')
+    for s in scheme:
+        for i in range(1,31):
+            print i
+            training.search(s,1,'summary')
 
 
 
@@ -62,14 +62,14 @@ if __name__ == "__main__":
     #         for i in range(1,31):
     #             training.buildVectorWithField(s,ds,i)
     # print "Field Training....."
-    l = pd.DataFrame(columns=['scheme','ds','topic','loss','alpha','beta','gamma'])
-    for s in scheme:
-        for ds in ['description','summary']:
-            for num in range(1,31):
-                filename = "vector/field_score_vector_" + s + "_" + ds + "_" + str(num) + ".csv"
-                print filename
-                print l
-                l = l.append(training.training_field(filename))
+    # l = pd.DataFrame(columns=['scheme','ds','topic','loss','alpha','beta','gamma'])
+    # for s in scheme:
+    #     for ds in ['description','summary']:
+    #         for num in range(1,31):
+    #             filename = "vector/field_score_vector_" + s + "_" + ds + "_" + str(num) + ".csv"
+    #             print filename
+    #             print l
+    #             l = l.append(training.training_field(filename))
 
-    l.to_csv("analysis/field_result.csv",sep='\t',columns=['scheme','ds','topic','loss','alpha','beta','gamma'],index=False)
-    print "Done"
+    # l.to_csv("analysis/field_result.csv",sep='\t',columns=['scheme','ds','topic','loss','alpha','beta','gamma'],index=False)
+    # print "Done"
