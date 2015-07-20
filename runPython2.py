@@ -9,7 +9,7 @@ if __name__ == "__main__":
     #searching = ElasticSearching.ElasticSearching()
 
     
-    scheme = ['bm25','ib','lmd','lmj','dfr']
+    scheme = ['bm25','tfidf','ib','lmd','lmj','dfr']
     #indexing.doIndex()
 
     # print "Build DS Vector.."
@@ -28,8 +28,8 @@ if __name__ == "__main__":
     # l.to_csv("analysis/ds_result.csv",sep='\t',index=False,columns=['scheme','topic','loss','alpha'])
     # print "Done"
     for s in scheme:
-        for i in range(1,31):
-            print i
+        for i in range(26,31):
+            print s,i
             training.search(s,i,'summary')
 
 
