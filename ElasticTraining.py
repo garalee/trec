@@ -13,7 +13,6 @@ class ElasticTraining:
 
     def search_scheme(self,scheme,num,ds):
         filename = "search_result/"+ scheme + "_"+ds+"_"+str(num)+".csv"
-
         self.ans.sort(['topic','relevancy'],ascending=[1,0])
 
         for index,entry in self.que.iterrows():
@@ -32,8 +31,8 @@ class ElasticTraining:
 
         l.to_csv(filename,sep='\t',index=False)
 
-    def search_field(self,t,num,ds,scheme):
-        filename = "search_result/"+scheme + "_" +ds + "_" + t + "_" + str(num) + ".csv"
+    def search_field(self,num,ds,scheme):
+        filename = "search_result/"+"field_" + scheme + "_" +ds + "_" + str(num) + ".csv"
         for index,entry in self.que.iterrows():
             if entry['topic'] == num:
                 query = entry
@@ -41,35 +40,27 @@ class ElasticTraining:
             
         content = query[ds].replace(r"/",',')
         analyzer = "my_"+scheme+"_analyzer"
-        res = self.es.search(index=scheme +"_garam",q=t+":"+content,doc_type='article',analyzer=analyzer,size=5000,request_timeout=120)
-        l = pd.DataFrame()
-        
-        for entry in res['hits']['hits']:
-            pmcid = entry['_source']['pmcid']
-            score = entry['_score']
-            l = l.append(pd.DataFrame({"pmcid" : [pmcid],"score" : [score]}))
-
-        l.to_csv(filename,sep='\t',index=False)
-
-        
-    def buildVectorWithoutTN(self,prefix,ds):
-        integrated_data = pd.DataFrame()
-        for topicnum in range(1,31):
-            filename = "vector/" + prefix + "_" + ds + "_" + str(topicnum) +".csv"
-            data = pd.read_csv(open(filename),sep='\t')
+        v = pd.DataFrame()
+        for t in ['title','abstract','body']:
+            l = pd.DataFrame()
             
-            data['index'] = data.index
-            data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
-            data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
-            integrated_data = pd.concat([integrated_data,data])
+            res= self.es.search(index=scheme +"_garam",q= t+":"+content,doc_type='article',analyzer=analyzer,size=5000,request_timeout=120)
+            
+            for entry in res['hits']['hits']:
+                pmcid = entry['_source']['pmcid']
+                score = entry['_score']
+                l = l.append(pd.DataFrame({t : [score]},index=[pmcid]))
 
-        return integrated_data
-        
+            v = pd.concat([v,l],join='inner',axis=1)
+        v.to_csv(filename,sep='\t')
 
     def training_scheme(self,filename):
         tokens = filename.split('_')
+        topicnum = tokens[3].split('.')[0]
+        ds = tokens[2]
         
-        l = pd.DataFrame(columns=['scheme1','scheme2','ds','loss','alpha','beta'])
+        l = pd.DataFrame()
+        data = pd.read_csv(open(filename),sep='\t')
         data['index'] = data.index
         data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
         data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
@@ -94,17 +85,17 @@ class ElasticTraining:
                         min_em = em.sum()
                         remember_alpha = alpha
                                 
-                    l = l.append(pd.DataFrame( 
-                        {
-                            'scheme1' : [self.scheme[s1]], 
-                            'scheme2' : [self.scheme[s2]], 
-                            'ds' : [ds], 
-                            'topic' : [topicnum], 
-                            'loss'  : [min_em], 
-                            'alpha' : [remember_alpha],
-                            'beta' : [remember_beta]
-                        }
-                    ))
+                l = l.append(pd.DataFrame( 
+                    {
+                        'scheme1' : [self.scheme[s1]], 
+                        'scheme2' : [self.scheme[s2]], 
+                        'ds' : [ds], 
+                        'topic' : [topicnum], 
+                        'loss'  : [min_em], 
+                        'alpha' : [remember_alpha],
+                        'beta' : [1-remember_alpha]
+                    }
+                ))
         return l            
         
     def test(self):
@@ -208,60 +199,59 @@ class ElasticTraining:
                 
                 
         
-    def buildVectorWithScheme(self,ds='summary'):
+    def buildVectorWithScheme(self,num,ds='summary'):
         v = pd.DataFrame()
         # Find the topic we are dealing with
        
-                    
         pmcList = []
         relevancyList = []
-    
+        
         # pmcid and relevancy collecting
         for index,entry in self.ans.iterrows():
             pmcList.append(entry['pmcid'])
             relevancyList.append(entry['relevancy'])
 
         for s in self.scheme:
-            for i in range(1,31):
-                filename = s+ '_' + ds + '_' + str(i) + '.csv'
-                print "Working on",filename
-                data = pd.read_csv(open('search_result/'+filename),sep='\t')
-                l = pd.DataFrame(columns=[s])
+            filename = s+ '_' + ds + '_' + str(num) + '.csv'
+            print "Working on",filename
+            data = pd.read_csv(open('search_result/'+filename),sep='\t')
+            l = pd.DataFrame(columns=[s])
 
-                for index,entry in data.iterrows():
-                    pmcid = entry['pmcid']
-                    score = entry['score']
-                    l = l.append(pd.DataFrame({s:[score]},index=[pmcid]))
+            for index,entry in data.iterrows():
+                pmcid = entry['pmcid']
+                score = entry['score']
+                l = l.append(pd.DataFrame({s:[score]},index=[pmcid]))
             
             v = pd.concat([v,l],join='inner',axis=1)
-            # merge schemes
+        # merge schemes
         r = pd.DataFrame({'relevancy' : relevancyList},index=[pmcList])
         v = v.join(r,how='inner')
         # v = pd.concat([v,r],join='inner',axis=1)
+        filename = 'scheme_vector_'+ ds + '_' + str(num) + '.csv'
         v.to_csv("vector/"+filename,sep='\t')
         return (v,r)
             
-    def buildVectorWithField(self,scheme,ds='summary'):
+    def buildVectorWithField(self,scheme,num,ds='summary'):
         pmcList = []
         relevancyList = []
 
         for index,entry in self.ans.iterrows():
             pmcList.append(entry['pmcid'])
             relevancyList.append(entry['relevancy'])
-                
+
+            
         v = pd.DataFrame()
 
         for t in ['title','abstract','body']:
-            for i in range(1,31):
-                filename = "search_result/"+scheme+"_" + ds + "_" + t + "_" + str(i) + ".csv"
-                print "Working on",filename
-                data = pd.read_csv(open(filename),sep='\t')
-                l = pd.DataFrame(columns=[t])
+            filename = "search_result/"+"field" + "_" + scheme+"_" + ds + "_" + t + "_" + str(num) + ".csv"
+            print "Working on",filename
+            data = pd.read_csv(open(filename),sep='\t')
+            l = pd.DataFrame(columns=[t])
 
-                for index,entry in data.iterrows():
-                    pmcid = entry['pmcid']
-                    score = entry['score']
-                    l = l.append(pd.DataFrame({t:[score],index=[pmcid]}))
+            for index,entry in data.iterrows():
+                pmcid = entry['pmcid']
+                score = entry['score']
+                l = l.append(pd.DataFrame({t:[score]},index=[pmcid]))
                     
             v = pd.concat([v,l],join='inner',axis=1)
             
@@ -270,22 +260,25 @@ class ElasticTraining:
         r.to_csv('vector/'+filename,sep='\t')
         return r
             
-    def training_field(self,filename):
-        tokens = filename.split('_')
-        scheme = tokens[3]
-        ds = tokens[4]
-        num = tokens[5].split('.')[0]
-
-        data = pd.read_csv(open(filename),sep=' ')
-        em_min = float("inf")
-        remember_alpha = 0
-        remember_beta = 0
-
-        for alpha in np.arange(0,1,0.01):
-            for beta in np.arange(0,1,0.01):
-                normA = data['title']/data['title'].sum()
-                normB = data['abstract']/data['abstract'].sum()
-                normC = data['body']/data['body'].sum()
+    def training_field(self,scheme,ds):
+        
+        v = pd.DataFrame()
+        for i in range(1,31):
+            l = pd.DataFrame()
+            em_min = float("inf")
+            remember_alpha = 0
+            remember_beta = 0
+            filename = 'field_' + scheme + '_' + ds + '_' + str(i) + '.csv'
+            data = pd.read_csv(open("search_result/"+filename),sep=',')
+            data['index'] = data.index
+            data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
+            data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
+            
+            for alpha in np.arange(0,1,0.01):
+                for beta in np.arange(0,1,0.01):
+                    normA = data['title']/data['title'].sum()
+                    normB = data['abstract']/data['abstract'].sum()
+                    normC = data['body']/data['body'].sum()
 
                 score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
                 relevancy = data['relevancy']
@@ -301,16 +294,14 @@ class ElasticTraining:
                     em_min = em.sum()
                     remember_alaph = alpha
                     remember_beta = beta
-        # print "Scheme <"+scheme+">,loss:",str(em_min)," alpha:",remember_alpha,",beta:",remember_beta,",gamma:",1-remember_alpha-remember_beta
 
-        return pd.DataFrame(
-            {
+            l = l.append(pd.DataFrame({
                 'scheme' : [scheme],
                 'ds' : [ds],
-                'topic' : [num],
+                'topic' : [i],
                 'loss' : [em_min],
                 'alpha' : [(1-remember_alpha)*(1-remember_beta)],
                 'beta' : [(1-remember_alpha)*remember_beta],
                 'gamma' : [remember_alpha]
-                }
-            )
+            }))
+        l.to_csv('analysis/' +'field_' + scheme + '_' + ds+ '.csv',sep='\t',index=False)

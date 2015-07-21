@@ -1,0 +1,16 @@
+scheme1	scheme2	ds	topic	loss	alpha	beta
+tfidf	bm25	summary	1	223.191951148	0.99	0.01
+tfidf	ib	summary	1	223.191952208	0.99	0.01
+tfidf	lmd	summary	1	223.191952222	0.99	0.01
+tfidf	lmj	summary	1	223.191951763	0.99	0.01
+tfidf	dfr	summary	1	223.191951947	0.99	0.01
+bm25	ib	summary	1	223.191965157	0.99	0.01
+bm25	lmd	summary	1	223.191965172	0.99	0.01
+bm25	lmj	summary	1	223.191964714	0.99	0.01
+bm25	dfr	summary	1	223.191964897	0.99	0.01
+ib	lmd	summary	1	223.19207005	0.99	0.01
+ib	lmj	summary	1	223.192025664	0.0	1.0
+ib	dfr	summary	1	223.192043966	0.0	1.0
+lmd	lmj	summary	1	223.192025664	0.0	1.0
+lmd	dfr	summary	1	223.192043966	0.0	1.0
+lmj	dfr	summary	1	223.192025847	0.99	0.01
