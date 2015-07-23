@@ -5,11 +5,11 @@ import ElasticTraining
 import pandas as pd
 if __name__ == "__main__":
     training = ElasticTraining.ElasticTraining()
-    #indexing = ElasticIndexing.ElasticIndexing()
+    indexing = ElasticIndexing.ElasticIndexing()
     #searching = ElasticSearching.ElasticSearching()
 
     
-    scheme = ['tfidf','ib','lmd','lmj','dfr','bm25']
+    scheme = ['ib','tfidf','lmd','lmj','dfr','bm25']
     #indexing.doIndex()
 
     # print "Build DS Vector.."
@@ -29,10 +29,10 @@ if __name__ == "__main__":
     # print "Done"
 
     
-    # for s in scheme:
-    #     for i in range(1,31):
-    #         print "Working on",s+"_"+str(i)
-    #         training.search_field(i,'summary',s)
+    for s in scheme:
+        for i in range(1,31):
+            print "Working on",s+"_"+str(i)
+            training.search_field(i,'summary',s)
 
     # print "Building Scheme Vector..."
     # for i in range(1,31):
@@ -60,7 +60,8 @@ if __name__ == "__main__":
     #     for i in range(1,31):
     #         training.buildVectorWithField(s,i)
                 
-    print "Field Training....."
-    
-    training.training_field('tfidf','summary')
-    print "Done"
+    # print "Field Training....."
+    # for s in scheme:
+    #     print "working on",s
+    #     training.training_field(s,'summary')
+    # print "Done"

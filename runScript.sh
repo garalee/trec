@@ -1,12 +1,12 @@
 # !/bin/bash
 
-bm25="bm25_garam";
-dfr="dfr_garam";
-ib="ib_garam";
-lmd="lmd_garam";
-lmj="lmj_garam";
-tfidf="tfidf_garam";
-ngram="ngram_garam";
+bm25="bm25";
+dfr="dfr";
+ib="ib";
+lmd="lmd";
+lmj="lmj";
+tfidf="tfidf";
+ngram="ngram";
 host="http://localhost:9200";
 
 bm25E="bm25_garam_eval"

@@ -62,58 +62,29 @@ class ElasticIndexing:
 
     def doIndex(self):
         cnt = len(self.ans)
-        limit = 4*cnt/5
-        # for i,posts in enumerate(self.ans):
-        #     if limit < i:
-        #         break
-        #     pmcid = posts['pmcid']
-        #     if self.coll.find({"articleMeta.pmcid" : str(pmcid)}).count() == 0:
-        #         print "Data doesn't exist:",pmcid
-        #         continue
 
-        #     (title,abstract,body) = self.getDocument(pmcid)
-                   
-        #     docin = {"title" : title,
-        #              "pmcid" : pmcid,
-        #              "abstract" : abstract,
-        #              "body" : body,
-        #              "topicnum" : posts['topicnum'],
-        #              "relevancy" : posts['FIELD4']
-        #              }
-            
-        #     self.es.index(index="bm25_garam",doc_type="article",id=pmcid,body=docin)
-        #     self.es.index(index="dfr_garam",doc_type="article",id=pmcid,body=docin)
-        #     self.es.index(index="ib_garam",doc_type="article",id=pmcid,body=docin)
-        #     self.es.index(index="lmd_garam",doc_type="article",id=pmcid,body=docin)
-        #     self.es.index(index="lmj_garam",doc_type="article",id=pmcid,body=docin)
-        #     self.es.index(index="tfidf_garam",doc_type="article",id=pmcid,body=docin)
-        #     res = self.es.index(index="ngram_garam",doc_type="article",id=pmcid,body=docin)
-        #     print res['created'],str(i)+"/"+str(cnt)
-        
         for i,posts in enumerate(self.ans):
-            if limit > i:
-                continue
-
             pmcid = posts['pmcid']
             if self.coll.find({"articleMeta.pmcid" : str(pmcid)}).count() == 0:
                 print "Data doesn't exist:",pmcid
                 continue
 
-            (title,abstract,body) =  self.getDocument(pmcid)
-
-            docin={ "title" : title,
-                    "pmcid" : pmcid,
-                    "abstract" : abstract,
-                    "body" : body,
-                    "topicnum" : posts['topicnum'],
-                    "relevancy" : posts['FIELD4']
-                    }
-            self.es.index(index="bm25_garam_eval",doc_type="article",id=pmcid,body=docin)
-            self.es.index(index="dfr_garam_eval",doc_type="article",id=pmcid,body=docin)
-            self.es.index(index="ib_garam_eval",doc_type="article",id=pmcid,body=docin)
-            self.es.index(index="lmd_garam_eval",doc_type="article",id=pmcid,body=docin)
-            self.es.index(index="lmj_garam_eval",doc_type="article",id=pmcid,body=docin)
-            self.es.index(index="tfidf_garam_eval",doc_type="article",id=pmcid,body=docin)
-            res = self.es.index(index="ngram_garam_eval",doc_type="article",id=pmcid,body=docin)
+            (title,abstract,body) = self.getDocument(pmcid)
+                   
+            docin = {"title" : title,
+                     "pmcid" : pmcid,
+                     "abstract" : abstract,
+                     "body" : body,
+                     "topicnum" : posts['topicnum'],
+                     "relevancy" : posts['FIELD4']
+                     }
+            
+            ID = str(posts['topicnum']) + '_' + str(pmcid)
+            self.es.index(index="bm25",doc_type="article",id=ID,body=docin)
+            self.es.index(index="dfr",doc_type="article",id=ID,body=docin)
+            self.es.index(index="ib",doc_type="article",id=ID,body=docin)
+            self.es.index(index="lmd",doc_type="article",id=ID,body=docin)
+            self.es.index(index="lmj",doc_type="article",id=ID,body=docin)
+            res = self.es.index(index="tfidf",doc_type="article",id=ID,body=docin)
             print res['created'],str(i)+"/"+str(cnt)
 

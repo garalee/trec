@@ -5,11 +5,58 @@ import MongoEx
 
 class ElasticTraining:
     def __init__(self):
-        self.es = Elasticsearch([{'host':'localhost','port':9200}])
+        self.es = Elasticsearch([{'host':'210.107.192.201','port':9200}])
         self.que = pd.read_csv(open('query2014.csv'),sep='\t')
         self.ans = pd.read_csv(open('answer2014.csv'),sep='\t')
         self.field = ['title','body','abstract']
         self.scheme = ['tfidf', 'bm25','ib','lmd','lmj','dfr']
+
+    def buildPairDB(self):
+        filename1 = 'pair_answer2014.csv'
+        filename2 = 'eval_answer2014.csv'
+        
+        tByTopic = []
+
+        ans = pd.read_csv(open('answer2014.csv'),sep='\t')
+        for i in range(1,31):
+            tByTopic.append(ans[ans['topic'] == i])
+
+        
+        l = pd.DataFrame()
+        eva = pd.DataFrame()
+
+        cum =  0
+        for topic_bundle in tByTopic:
+            relnum = len(topic_bundle[(topic_bundle['relevancy']==2) | (topic_bundle['relevancy']==1)])
+            cnt = (relnum*4)/5
+            zerocnt = cnt
+            cum = cum + cnt
+            print "COUNT:",cnt
+            print "CUM :", cum
+            for idx,entry in topic_bundle.iterrows():
+                if ((entry['relevancy'] == 1) or (entry['relevancy'] == 2)) and (not cnt == 0):
+                    l = l.append(pd.DataFrame({
+                                "pmcid" : [entry['pmcid']],
+                                "topic" : [entry['topic']],
+                                "relevancy" : [entry['relevancy']]
+                                }))
+                    cnt = cnt - 1
+                elif (entry['relevancy'] == 0) and (not zerocnt == 0):
+                    l = l.append(pd.DataFrame({
+                                "pmcid" : [entry['pmcid']],
+                                "topic" : [entry['topic']],
+                                "relevancy" : [entry['relevancy']]
+                                }))
+                    zerocnt = zerocnt - 1
+                else:
+                    eva = eva.append(pd.DataFrame({
+                                "pmcid" : [entry['pmcid']],
+                                "topic" : [entry['topic']],
+                                "relevancy" : [entry['relevancy']]
+                                }))
+
+        l.to_csv(filename1,sep='\t',index=False)
+        eva.to_csv(filename2,sep='\t',index=False)
 
     def search_scheme(self,scheme,num,ds):
         filename = "search_result/"+ scheme + "_"+ds+"_"+str(num)+".csv"
@@ -37,22 +84,59 @@ class ElasticTraining:
             if entry['topic'] == num:
                 query = entry
                 break
-            
+        pmcList = []
+        relevancyList = []
+
+        for index,entry in self.ans.iterrows():
+            if entry['topic'] == num:
+                pmcList.append(entry['pmcid'])
+                relevancyList.append(entry['relevancy'])
+
+        reTable = pd.DataFrame({"pmcid":pmcList,"relevancy":relevancyList})
+
         content = query[ds].replace(r"/",',')
+        token = content.split(' ')
+        content = [ x for idx,x in enumerate(token) if not idx == 0]
+        content = ' '.join(content)
+
         analyzer = "my_"+scheme+"_analyzer"
-        v = pd.DataFrame()
-        for t in ['title','abstract','body']:
-            l = pd.DataFrame()
-            
-            res= self.es.search(index=scheme +"_garam",q= t+":"+content,doc_type='article',analyzer=analyzer,size=5000,request_timeout=120)
-            
-            for entry in res['hits']['hits']:
+
+        resTitle= self.es.search(index=scheme+"_garam",q='title:' + content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
+
+        l = pd.DataFrame()
+        for entry in resTitle['hits']['hits']:
+            if entry['_source']['topicnum'] == num:
                 pmcid = entry['_source']['pmcid']
                 score = entry['_score']
-                l = l.append(pd.DataFrame({t : [score]},index=[pmcid]))
+                l = l.append(pd.DataFrame({"pmcid":[pmcid], 'title':[score]}))
 
-            v = pd.concat([v,l],join='inner',axis=1)
-        v.to_csv(filename,sep='\t')
+
+        resAbstract= self.es.search(index=scheme+"_garam",q='abstract:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
+        resBody= self.es.search(index=scheme+"_garam",q='body:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
+        
+
+        v = l
+        l = pd.DataFrame()
+        for entry in resAbstract['hits']['hits']:
+            if entry['_source']['topicnum'] == num:
+                pmcid = entry['_source']['pmcid']
+                score = entry['_score']
+                l = l.append(pd.DataFrame({"pmcid":[pmcid], 'abstract' : [score]}))
+
+        v = pd.merge(v,l,how='outer',on=['pmcid'])
+        l = pd.DataFrame()
+        for entry in resBody['hits']['hits']:
+            if entry['_source']['topicnum'] == num:
+                pmcid = entry['_source']['pmcid']
+                score = entry['_score']
+                l = l.append(pd.DataFrame({"pmcid":[pmcid], 'body' : [score]}))
+
+        v = pd.merge(v,l,how='inner',on=['pmcid'])
+        v=v.fillna(0)
+        v = pd.merge(v,reTable,how='inner',on=['pmcid'])
+        v=v.fillna(0)
+        print v
+        v.to_csv(filename,sep='\t',index=False)
 
     def training_scheme(self,filename):
         tokens = filename.split('_')
@@ -143,61 +227,7 @@ class ElasticTraining:
                 'loss' : [em_min],
                 'alpha' : [remember_alpha]
                 })
-
-    def buildVectorWithDS(self,num,scheme):
-        print "Building DS Score Vector...",scheme,":",str(num)
-        filename = "DS_score_vector_" + scheme + "_" + str(num) + ".csv"
-
-        for entry in self.que:
-            if entry['number']== str(num):
-                query = entry
-                break
-
-        pmcList = []
-        relevancyList = []
-
-        for entry in self.ans:
-            if entry['topicnum'] == num:
-                pmcList.append(entry['pmcid'])
-                relevancyList.append(entry['FIELD4'])
-
-        v = pd.DataFrame({'pmcid' : pmcList,'relevancy' : relevancyList})
-
-        analyzer = "my_"+scheme+"_analyzer"
-
-        
-        content1 = query['summary'].replace(r"/",',')
-        res1 = self.es.search(index=scheme + "_garam",q=content1,doc_type="article",analyzer=analyzer,size=10000)
-        content2 = query['description'].replace(r"/",',')
-        res2 = self.es.search(index=scheme + "_garam",q=content2,doc_type="article",analyzer=analyzer,size=10000)
-
-        l1 = []
-        l2 = []
-        for pmcid in pmcList:
-            flag = False
-            for entry in res1['hits']['hits']:
-                if entry['_source']['pmcid'] == pmcid:
-                    flag=True
-                    l1.append(entry['_score'])
-                    break
-            if not flag:
-                l1.append(float(0))
-
-            for entry in res2['hits']['hits']:
-                if entry['_source']['pmcid'] == pmcid:
-                    flag=True
-                    l2.append(entry['_score'])
-                    break
-            if not flag:
-                l2.append(float(0))
-
-        temp1 = pd.DataFrame({ 'summary' : l1})
-        temp2 = pd.DataFrame({ 'description' : l2})
-        v = pd.concat([v,temp1,temp2],axis=1)
-        v.to_csv("vector/"+filename,sep='\t')
-        return v
-                
-                
+                                
         
     def buildVectorWithScheme(self,num,ds='summary'):
         v = pd.DataFrame()
@@ -236,42 +266,28 @@ class ElasticTraining:
         relevancyList = []
 
         for index,entry in self.ans.iterrows():
-            pmcList.append(entry['pmcid'])
-            relevancyList.append(entry['relevancy'])
+            if entry['topic'] == num:
+                pmcList.append(entry['pmcid'])
+                relevancyList.append(entry['relevancy'])
 
-            
-        v = pd.DataFrame()
+        filename = "field" + "_" + scheme+"_" + ds + "_"  + str(num) + ".csv"
+        print "Working on",filename 
+        data = pd.read_csv(open("search_result/"+filename),sep='\t')
 
-        for t in ['title','abstract','body']:
-            filename = "search_result/"+"field" + "_" + scheme+"_" + ds + "_" + t + "_" + str(num) + ".csv"
-            print "Working on",filename
-            data = pd.read_csv(open(filename),sep='\t')
-            l = pd.DataFrame(columns=[t])
-
-            for index,entry in data.iterrows():
-                pmcid = entry['pmcid']
-                score = entry['score']
-                l = l.append(pd.DataFrame({t:[score]},index=[pmcid]))
-                    
-            v = pd.concat([v,l],join='inner',axis=1)
-            
-        r = pd.DataFrame({'relevancy' : relevancyList},index=[pmcList])
-        r = r.join(v,how='inner')
-        r.to_csv('vector/'+filename,sep='\t')
+        r = pd.DataFrame({'pmcid' : pmcList, 'relevancy' : relevancyList})
+        r =  pd.merge(data,r,how='inner',on=['pmcid'])
+        
+        r.to_csv('vector/'+filename,sep='\t',index=False)
         return r
             
     def training_field(self,scheme,ds):
-        
-        v = pd.DataFrame()
+        l = pd.DataFrame()
         for i in range(1,31):
-            l = pd.DataFrame()
             em_min = float("inf")
             remember_alpha = 0
             remember_beta = 0
             filename = 'field_' + scheme + '_' + ds + '_' + str(i) + '.csv'
-            data = pd.read_csv(open("search_result/"+filename),sep=',')
-            data['index'] = data.index
-            data = data.rename(columns={'Unnamed: 0' : 'pmcid'})
+            data = pd.read_csv(open("vector/"+filename),sep='\t')
             data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
             
             for alpha in np.arange(0,1,0.01):
@@ -280,20 +296,20 @@ class ElasticTraining:
                     normB = data['abstract']/data['abstract'].sum()
                     normC = data['body']/data['body'].sum()
 
-                score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
-                relevancy = data['relevancy']
+                    score = (1-alpha)*(1-beta)*normA + (1-alpha)*beta*normB + alpha*normC
+                    relevancy = data['relevancy']
 
-                relevancy[relevancy == 1] = 0.5
-                relevancy[relevancy == 2] = 1
+                    relevancy[relevancy == 1] = 0.5
+                    relevancy[relevancy == 2] = 1
 
-                em = (relevancy - score) ** 2
+                    em = (relevancy - score) ** 2
 
                 #print "error :",em.sum(),"alpha :",alpha,",beta:",beta
 
-                if em.sum() < em_min:
-                    em_min = em.sum()
-                    remember_alaph = alpha
-                    remember_beta = beta
+                    if em.sum() < em_min:
+                        em_min = em.sum()
+                        remember_alaph = alpha
+                        remember_beta = beta
 
             l = l.append(pd.DataFrame({
                 'scheme' : [scheme],

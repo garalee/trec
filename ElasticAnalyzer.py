@@ -3,11 +3,60 @@ import pandas as pd
 
 class ElasticAnalyzer:
     def __init__(self):
-        self.fieldData = pd.read_csv(open('analysis/field_result.csv'),sep='\t')
-        self.schemeData = pd.read_csv(open('analysis/scheme_result.csv'),sep='\t')
-        self.que = self.db['que2014'].find_one()['topic']
-        self.ans = self.db['ans2014'].find_one()['topicanswer']
+        self.es = Elasticsearch([{'host':'210,107,192,201','port':9200}])
+        self.que = pd.read_csv(open('query2014.csv'),sep='\t')
+        self.ans_eval = pd.read_csv(open('eval_answer2014.csv'),sep='\t')
         self.scheme = ['bm25','tfidf','ib','lmd','lmj','dfr']
+    
+
+    def query_field_control(self,scheme,ds,topic,num,weights):
+        (alpha,beta,gamma) = weights
+        for index,entry in self.que.iterrows():
+            if entry['topic'] == topic:
+                query =entry
+                break
+        
+        
+        content = query[ds].replace(r"/",',')
+        token = content.split(' ')
+        content = [x for idx,x in enumerat(toeken) if not idx ==0]
+        content = ' '.join(content)
+        analyzer = "my_" + scheme + "_analyzer"
+
+        resTitle = self.es.search(index=scheme+"_garam_eval",q='title:'+content,doc_type='article',analyzer=analyzer,size=10000)
+        resAbstract = self.es.search(index=scheme+"_garam_eval",q='abstract:'+content,doc_type='article',analyzer=analyzer,size=10000)
+        resBody = self.es.search(index=scheme+"_garam_eval",q='body:'+content,doc_type='article',analyzer=analyzer,size=10000)
+
+        for entry in resTitle['hits']['hits']:
+            if entry['_source']['topicnum'] == 
+            pmcid = entry['_id']
+            score = entry['_score']
+        
+
+    def query_field_comparison(self,scheme,ds,topic):
+        for index,entry in self.que.interrows():
+            if entry['topic'] == topic:
+                query = entry
+                break
+
+        content = query[ds].replace(r"/",',')
+        token = content.split(' ')
+        content = [x for idx,x in enumerat(toeken) if not idx ==0 ]
+        content = ' '.join(content)
+        analyzer = "my_" + scheme + "_analyzer"
+
+        res = self.es.search(index=scheme+"_garam_eval",content,doc_type="article",analyzer = analyzer, size=10000)
+
+        l = pd.DataFrame()
+        for entry in res['hits']['hits']:
+            if entry['_source']['topicnum'] == topic:
+                pmcid = entry['_source']['pmcid']
+                score = entry['score']
+                relevancy = entry['_source']['relevancy']
+                l = l.append(pd.DataFrame({"pmcid" : [pmcid],"score":[score], "relevancy":[relevancy]}))
+
+        return l
+
     
     def runTestWithField(self,alpha,beta,gamma,scheme,ds):
         for i in range(1,31):
