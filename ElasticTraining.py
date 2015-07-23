@@ -101,8 +101,8 @@ class ElasticTraining:
 
         analyzer = "my_"+scheme+"_analyzer"
 
-        resTitle= self.es.search(index=scheme+"_garam",q='title:' + content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
-
+        resTitle= self.es.search(index=scheme+"_garam",q='title:' + content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=200)
+        print "Done with title"
         l = pd.DataFrame()
         for entry in resTitle['hits']['hits']:
             if entry['_source']['topicnum'] == num:
@@ -110,13 +110,15 @@ class ElasticTraining:
                 score = entry['_score']
                 l = l.append(pd.DataFrame({"pmcid":[pmcid], 'title':[score]}))
 
-
-        resAbstract= self.es.search(index=scheme+"_garam",q='abstract:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
-        resBody= self.es.search(index=scheme+"_garam",q='body:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=120)
+        resAbstract= self.es.search(index=scheme+"_garam",q='abstract:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=200)
+        print "Done with abstract"
+        resBody= self.es.search(index=scheme+"_garam",q='body:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=200)
+        print "Done with body"
         
 
         v = l
         l = pd.DataFrame()
+        
         for entry in resAbstract['hits']['hits']:
             if entry['_source']['topicnum'] == num:
                 pmcid = entry['_source']['pmcid']
@@ -135,7 +137,6 @@ class ElasticTraining:
         v=v.fillna(0)
         v = pd.merge(v,reTable,how='inner',on=['pmcid'])
         v=v.fillna(0)
-        print v
         v.to_csv(filename,sep='\t',index=False)
 
     def training_scheme(self,filename):
