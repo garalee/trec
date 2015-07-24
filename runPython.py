@@ -58,12 +58,13 @@ if __name__ == "__main__":
 
 
     # print "Building Field Vector..."
-    # for i in range(1,24):
-    #     print "Working on : ib_" + str(i)
-    #     training.buildVectorWithField('ib',i)
+    # for s in ['ib','bm25','tfidf','lmd','lmj']:
+    #     for i in range(1,24):
+    #         print "Working on :", s + "_" + str(i)
+    #         training.buildVectorWithField(s,i)
                 
     print "Field Training....."
-    for s in ['ib']:
+    for s in ['ib','tfidf','lmd','bm25']:
         print "working on",s
         training.training_field(s,'summary')
     print "Done"

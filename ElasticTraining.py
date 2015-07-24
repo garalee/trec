@@ -251,7 +251,7 @@ class ElasticTraining:
                 if zero_cnt == 0:
                     evaluation = evaluation.append(entry)
                 else:
-                    training = training.append(entry)
+                    #training = training.append(entry)
                     zero_cnt = zero_cnt - 1
             else:
                 if cnt == 0:
@@ -292,6 +292,9 @@ class ElasticTraining:
                         em_min = em.sum()
                         remember_alaph = alpha
                         remember_beta = beta
+            print "Alpha:",(1-remember_alpha)*(1-remember_beta)
+            print "Beta:",(1-remember_alpha)*remember_beta
+            print "Gamma:",remember_alpha
 
             l = l.append(pd.DataFrame({
                 'scheme' : [scheme],
