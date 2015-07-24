@@ -3,10 +3,13 @@ import ElasticIndexing
 import ElasticSearching
 import ElasticTraining
 import pandas as pd
+
+
 if __name__ == "__main__":
+    
     training = ElasticTraining.ElasticTraining()
-    indexing = ElasticIndexing.ElasticIndexing()
-    #searching = ElasticSearching.ElasticSearching()
+#    indexing = ElasticIndexing.ElasticIndexing()
+#    searching = ElasticSearching.ElasticSearching()
 
     
     scheme = ['ib','tfidf','lmd','lmj','dfr','bm25']
@@ -27,12 +30,12 @@ if __name__ == "__main__":
     #         l = l.append(training.training_ds(filename))
     # l.to_csv("analysis/ds_result.csv",sep='\t',index=False,columns=['scheme','topic','loss','alpha'])
     # print "Done"
-
     
-    for s in scheme:
-        for i in range(1,31):
+    for s in ['bm25','tfidf','lmd','lmj','dfr']:
+        for i in range(1,24):
             print "Working on",s+"_"+str(i)
             training.search_field(i,'summary',s)
+   
 
     # print "Building Scheme Vector..."
     # for i in range(1,31):

@@ -3,30 +3,67 @@ import ElasticIndexing
 import ElasticSearching
 import ElasticTraining
 import pandas as pd
+
+
 if __name__ == "__main__":
-    training = ElasticTraining.ElasticTraining()    
-    scheme = ['bm25','tfidf','ib','lmd','lmj']
-
+    
+    training = ElasticTraining.ElasticTraining()
+#    indexing = ElasticIndexing.ElasticIndexing()
+#    searching = ElasticSearching.ElasticSearching()
 
     
-    #training.test()
-    # for ds in ['description','summary']:
-    #     for i in range(1,31):
-    #         training.buildVectorWithScheme(i,ds)
+    scheme = ['ib','tfidf','lmd','lmj','dfr','bm25']
+    #indexing.doIndex()
 
+    # print "Build DS Vector.."
     # for s in scheme:
-    #     for ds in ['description','summary']:
-    #         for i in range(1,31):
-    #             training.buildVectorWithField(s,ds,i)
-                
+    #     for i in range(1,31):
+    #         print "<"+s+">" +"NUM : " + str(i)
+    #         training.buildVectorWithDS(i,s)
     # print "\a"
+
+    # print "Training DS Vector.."
+    # l = pd.DataFrame(columns=['scheme','topic','loss','alpha'])
+    # for s in scheme:
+    #     for i in range(1,31):
+    #         filename = "vector/DS_score_vector_"+s+"_" + str(i) + ".csv"
+    #         l = l.append(training.training_ds(filename))
+    # l.to_csv("analysis/ds_result.csv",sep='\t',index=False,columns=['scheme','topic','loss','alpha'])
+    # print "Done"
     
+    # for s in scheme:
+    #     for i in range(1,31):
+    #         print "Working on",s+"_"+str(i)
+    #         training.search_field(i,'summary',s)
+    # for i in range(25,31):
+    #     print "Working on","ib_"+str(i)
+    #     training.search_field(i,'summary','ib')
+
+    # print "Building Scheme Vector..."
+    # for i in range(1,31):
+    #     training.buildVectorWithScheme(i)
+    # print "Done"
     
-    print "Scheme Training..."
-    l = pd.DataFrame(columns=['scheme1','scheme2','ds','topic','loss','alpha'])
-    for ds in ['description','summary']:
-        for num in range(1,31):
-            filename = "vector/scheme_score_vector_" + ds + "_" + str(num) + ".csv"
-            l = l.append(training.training_scheme(filename))
-    l.to_csv("analysis/scheme_result.csv",sep='\t',index=False,columns=['scheme1','scheme2','ds','topic','loss','alpha'])
+    # print "Scheme Vector Integration" 
+    
+   
+    # print "Scheme Training..."
+    # l = pd.DataFrame()
+    # for num in range(1,31):
+    #     filename = "vector/scheme_vector_summary_" + str(num) + ".csv"
+    #     print "working on",filename
+    #     l = training.training_scheme(filename)
+    #     l.to_csv("analysis/scheme_" + str(num) +".csv",sep='\t',index=False,columns=['scheme1','scheme2','ds','topic','loss','alpha','beta'])
+    # print "Done"
+
+
+    # print "Building Field Vector..."
+    # for i in range(1,24):
+    #     print "Working on : ib_" + str(i)
+    #     training.buildVectorWithField('ib',i)
+                
+    print "Field Training....."
+    for s in ['ib']:
+        print "working on",s
+        training.training_field(s,'summary')
     print "Done"

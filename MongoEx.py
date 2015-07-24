@@ -4,7 +4,7 @@ from pymongo import MongoClient
 
 
 class MongoEx:
-    HOST = "mongodb://202.30.23.40:27017"
+    HOST = "mongodb://localhost:27017"
     
     def __init__(self):
         self.client = pymongo.MongoClient(MongoEx.HOST)

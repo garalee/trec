@@ -5,7 +5,7 @@ import MongoEx
 
 class ElasticTraining:
     def __init__(self):
-        self.es = Elasticsearch([{'host':'210.107.192.201','port':9200}])
+        self.es = Elasticsearch([{'host':'localhost','port':9200}])
         self.que = pd.read_csv(open('query2014.csv'),sep='\t')
         self.ans = pd.read_csv(open('answer2014.csv'),sep='\t')
         self.field = ['title','body','abstract']
@@ -102,7 +102,7 @@ class ElasticTraining:
         analyzer = "my_"+scheme+"_analyzer"
 
         resTitle= self.es.search(index=scheme+"_garam",q='title:' + content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=200)
-        print "Done with title"
+        print "Done with title :",len(resTitle['hits']['hits'])
         l = pd.DataFrame()
         for entry in resTitle['hits']['hits']:
             if entry['_source']['topicnum'] == num:
@@ -111,9 +111,9 @@ class ElasticTraining:
                 l = l.append(pd.DataFrame({"pmcid":[pmcid], 'title':[score]}))
 
         resAbstract= self.es.search(index=scheme+"_garam",q='abstract:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=200)
-        print "Done with abstract"
+        print "Done with abstract :",len(resAbstract['hits']['hits'])
         resBody= self.es.search(index=scheme+"_garam",q='body:'+content,doc_type='article',analyzer=analyzer,size=40000,request_timeout=200)
-        print "Done with body"
+        print "Done with body :",len(resBody['hits']['hits'])
         
 
         v = l
@@ -124,7 +124,9 @@ class ElasticTraining:
                 pmcid = entry['_source']['pmcid']
                 score = entry['_score']
                 l = l.append(pd.DataFrame({"pmcid":[pmcid], 'abstract' : [score]}))
-
+        print "V:",len(v)
+        print "L:",len(l)
+    
         v = pd.merge(v,l,how='outer',on=['pmcid'])
         l = pd.DataFrame()
         for entry in resBody['hits']['hits']:
@@ -133,7 +135,7 @@ class ElasticTraining:
                 score = entry['_score']
                 l = l.append(pd.DataFrame({"pmcid":[pmcid], 'body' : [score]}))
 
-        v = pd.merge(v,l,how='inner',on=['pmcid'])
+        v = pd.merge(v,l,how='outer',on=['pmcid'])
         v=v.fillna(0)
         v = pd.merge(v,reTable,how='inner',on=['pmcid'])
         v=v.fillna(0)
@@ -194,41 +196,7 @@ class ElasticTraining:
         res = self.es.search(index='tfidf',q=content,doc_type="article",analyzer="my_tfidf_analyzer",size=1500)
 
         print str(res['hits']['hits'][0]['_score'])
-
-    def training_ds(self,filename):
-        tokens = filename.split('_')
-        scheme = tokens[3]
-        num = tokens[4].split('.')[0]
-
-        data = pd.read_csv(open(filename),sep='\t')
-
-        em_min = float("inf")
-        remember_alpha = 0
-        for alpha in np.arange(0,1,0.01):
-            normA = data['description']/data['description'].sum()
-            normB = data['summary']/data['summary'].sum()
-
-            score = alpha*normA + (1-alpha)*normB
-            relevancy = data['relevancy']
-
-            relevancy[relevancy == 1] = 0.5
-            relevancy[relevancy == 2] = 1
-
-            em = (relevancy - score) ** 2
-
-            if em.sum() < em_min:
-                em_min = em.sum()
-                remember_alpha = alpha
-
-
-        return pd.DataFrame(
-            {
-                'scheme' : [scheme],
-                'topic' : [num],
-                'loss' : [em_min],
-                'alpha' : [remember_alpha]
-                })
-                                
+                 
         
     def buildVectorWithScheme(self,num,ds='summary'):
         v = pd.DataFrame()
@@ -266,28 +234,43 @@ class ElasticTraining:
         pmcList = []
         relevancyList = []
 
-        for index,entry in self.ans.iterrows():
-            if entry['topic'] == num:
-                pmcList.append(entry['pmcid'])
-                relevancyList.append(entry['relevancy'])
-
         filename = "field" + "_" + scheme+"_" + ds + "_"  + str(num) + ".csv"
-        print "Working on",filename 
+        filename_training = "field" + "_" + scheme+"_" + ds + "_"  + str(num) + "_training.csv"
+        filename_eval = "field" + "_" + scheme+ "_" + ds + "_" + str(num) + "_eval.csv" 
+        print "Working on",filename
         data = pd.read_csv(open("search_result/"+filename),sep='\t')
 
-        r = pd.DataFrame({'pmcid' : pmcList, 'relevancy' : relevancyList})
-        r =  pd.merge(data,r,how='inner',on=['pmcid'])
-        
-        r.to_csv('vector/'+filename,sep='\t',index=False)
-        return r
+        training = pd.DataFrame()
+        evaluation = pd.DataFrame()
+
+        cnt = len(data[(data['relevancy'] == 1) | (data['relevancy'] == 2)])*4/5
+        zero_cnt = cnt
+
+        for idx,entry in data.iterrows():
+            if entry['relevancy'] == 0:
+                if zero_cnt == 0:
+                    evaluation = evaluation.append(entry)
+                else:
+                    training = training.append(entry)
+                    zero_cnt = zero_cnt - 1
+            else:
+                if cnt == 0:
+                    evaluation = evaluation.append(entry)
+                else:
+                    training = training.append(entry)
+                    cnt = cnt - 1
+
+        training.to_csv('vector/'+filename_training,sep='\t',index=False)
+        evaluation.to_csv('vector/'+filename_eval,sep='\t',index=False)        
             
     def training_field(self,scheme,ds):
         l = pd.DataFrame()
-        for i in range(1,31):
+        for i in range(1,24):
+            print "Topic :",str(i)
             em_min = float("inf")
             remember_alpha = 0
             remember_beta = 0
-            filename = 'field_' + scheme + '_' + ds + '_' + str(i) + '.csv'
+            filename = 'field_' + scheme + '_' + ds + '_' + str(i) + '_training.csv'
             data = pd.read_csv(open("vector/"+filename),sep='\t')
             data.drop_duplicates(subset='pmcid',take_last=True,inplace=True)
             
@@ -304,8 +287,6 @@ class ElasticTraining:
                     relevancy[relevancy == 2] = 1
 
                     em = (relevancy - score) ** 2
-
-                #print "error :",em.sum(),"alpha :",alpha,",beta:",beta
 
                     if em.sum() < em_min:
                         em_min = em.sum()
